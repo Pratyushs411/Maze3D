@@ -2,12 +2,19 @@
 #include <OpenGL/gl.h>
 #include <OpenGL/glu.h>
 #include <math.h>
+#include<GLUT/glut.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 // Window dimensions
 const int WIDTH = 800;
 const int HEIGHT = 600;
+
+// Timer variables
+float gameStartTime = 0.0f;
+float currentGameTime = 0.0f;
+bool gameStarted = false;
+char timeString[32];
 
 // Player properties
 float playerX = 1.5f;
@@ -41,6 +48,42 @@ void handleKeyInput(GLFWwindow* window);
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
 bool checkCollision(float newX, float newZ);
+
+void renderTimer() {
+    // Disable lighting for text rendering
+    glDisable(GL_LIGHTING);
+    
+    // Switch to orthographic projection for 2D rendering
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    glOrtho(0, WIDTH, HEIGHT, 0, -1, 1);
+    
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+    
+    // Set text color to white
+    glColor3f(1.0f, 1.0f, 1.0f);
+    
+    // Render the timer text in the top left corner
+    glRasterPos2i(10, 20);
+    for (int i = 0; timeString[i] != '\0'; i++) {
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, timeString[i]);
+    }
+    
+    // Return to 3D rendering
+    glMatrixMode(GL_MODELVIEW);
+    glPopMatrix();
+    
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    
+    glMatrixMode(GL_MODELVIEW);
+    
+    // Re-enable lighting
+    glEnable(GL_LIGHTING);
+}
 
 int main() {
     // Initialize GLFW
@@ -93,10 +136,27 @@ int main() {
     glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
     glMaterialfv(GL_FRONT, GL_SHININESS, high_shininess);
     
+    // Initialize timer values
+    gameStartTime = glfwGetTime();
+    sprintf(timeString, "Time: 0.00 seconds");
+    
     // Main loop
     while (!glfwWindowShouldClose(window)) {
         // Process input
         processInput(window);
+        
+        // Update timer if game has started
+        if (gameStarted) {
+            currentGameTime = glfwGetTime() - gameStartTime;
+            sprintf(timeString, "Time: %.2f seconds", currentGameTime);
+        } else if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS ||
+                   glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS ||
+                   glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS ||
+                   glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+            // Start timer when player first moves
+            gameStarted = true;
+            gameStartTime = glfwGetTime();
+        }
         
         // Set background color (blue sky)
         glClearColor(0.53f, 0.81f, 0.92f, 1.0f);
@@ -107,6 +167,9 @@ int main() {
         
         // Render the maze
         renderMaze();
+        
+        // Render timer display
+        renderTimer();
         
         // Swap front and back buffers
         glfwSwapBuffers(window);
@@ -243,6 +306,8 @@ void drawCube(float size) {
     
     glEnd();
 }
+
+// Render text on screen (simple implementation)
 
 // Render the maze walls, floor, and goal
 void renderMaze() {
