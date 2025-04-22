@@ -69,6 +69,7 @@
 		B1076F932DB695A80078E579 /* LICENSE.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = LICENSE.txt; sourceTree = "<group>"; };
 		B1076F942DB695A80078E579 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		B1076F952DB695A80078E579 /* sbom.spdx.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = sbom.spdx.json; sourceTree = "<group>"; };
+		B1076F982DB7D3D60078E579 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -97,6 +98,7 @@
 		B1076F4A2DB6863B0078E579 = {
 			isa = PBXGroup;
 			children = (
+				B1076F982DB7D3D60078E579 /* README.md */,
 				B1076F552DB6863B0078E579 /* maze3D */,
 				B1076F5D2DB686570078E579 /* Frameworks */,
 				B1076F542DB6863B0078E579 /* Products */,
@@ -293,6 +295,7 @@
 				TargetAttributes = {
 					B1076F522DB6863B0078E579 = {
 						CreatedOnToolsVersion = 16.2;
+						LastSwiftMigration = 1620;
 					};
 				};
 			};
@@ -444,6 +447,7 @@
 		B1076F5B2DB6863B0078E579 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				"HEADER_SEARCH_PATHS[arch=*]" = (
 					/opt/homebrew/Cellar/glfw/3.4/include,
@@ -455,12 +459,15 @@
 					/opt/homebrew/Cellar/glew/2.2.0_1/lib,
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
 			};
 			name = Debug;
 		};
 		B1076F5C2DB6863B0078E579 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
@@ -468,6 +475,7 @@
 					/opt/homebrew/Cellar/glew/2.2.0_1/lib,
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 6.0;
 			};
 			name = Release;
 		};
