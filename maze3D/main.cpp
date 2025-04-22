@@ -5,6 +5,9 @@
 #include<GLUT/glut.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
 // Window dimensions
 const int WIDTH = 800;
@@ -23,7 +26,8 @@ float playerZ = 1.5f;
 float playerAngle = 0.0f;
 float playerSpeed = 0.05f;
 float rotationSpeed = 0.03f;
-
+bool gameCompleted = false;
+char congratsMessage[128];
 // Maze dimensions and layout
 const int MAZE_WIDTH = 10;
 const int MAZE_HEIGHT = 10;
@@ -82,6 +86,123 @@ void renderTimer() {
     glMatrixMode(GL_MODELVIEW);
     
     // Re-enable lighting
+    glEnable(GL_LIGHTING);
+}
+
+void renderCongratsScreen() {
+    // Save current matrices and disable lighting
+    glDisable(GL_LIGHTING);
+    glDisable(GL_DEPTH_TEST);
+    
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    glOrtho(0, WIDTH, 0, HEIGHT, -1, 1);
+    
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+    
+    // Draw gradient background
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    
+    glBegin(GL_QUADS);
+    // Dark blue to light blue gradient
+    glColor4f(0.0f, 0.0f, 0.3f, 0.9f);
+    glVertex2f(0, 0);
+    glVertex2f(WIDTH, 0);
+    glColor4f(0.2f, 0.2f, 0.6f, 0.9f);
+    glVertex2f(WIDTH, HEIGHT);
+    glVertex2f(0, HEIGHT);
+    glEnd();
+    
+    // Draw decorative border
+    glLineWidth(5.0f);
+    glBegin(GL_LINE_LOOP);
+    glColor3f(1.0f, 0.8f, 0.0f); // Gold border
+    glVertex2f(WIDTH * 0.1f, HEIGHT * 0.2f);
+    glVertex2f(WIDTH * 0.9f, HEIGHT * 0.2f);
+    glVertex2f(WIDTH * 0.9f, HEIGHT * 0.8f);
+    glVertex2f(WIDTH * 0.1f, HEIGHT * 0.8f);
+    glEnd();
+    glLineWidth(1.0f);
+    
+    // Calculate center of screen
+    int centerX = WIDTH / 2;
+    int centerY = HEIGHT / 2;
+    
+    // Draw title text - LARGER SIZE using GLUT_BITMAP_TIMES_ROMAN_24
+    glColor3f(1.0f, 1.0f, 0.0f); // Yellow text
+    char titleText[] = "MAZE COMPLETED!";
+    // Estimate width for TIMES_ROMAN_24 (wider than Helvetica)
+    int titleWidth = strlen(titleText) * 20;
+    glRasterPos2i(centerX - (titleWidth / 4), centerY + 100);
+    
+    for (int i = 0; titleText[i] != '\0'; i++) {
+        glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, titleText[i]);
+    }
+    
+    // Draw congratulations message - LARGER SIZE using GLUT_BITMAP_HELVETICA_18
+    glColor3f(1.0f, 1.0f, 1.0f); // White text
+    int msgWidth = strlen(congratsMessage) * 20; // Adjusted for larger font
+    glRasterPos2i(centerX/1.5, centerY);
+    
+    for (int i = 0; congratsMessage[i] != '\0'; i++) {
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, congratsMessage[i]);
+    }
+    
+    // Draw instruction text - increased size
+    char instructText[] = "Press R to play again or ESC to quit";
+    int instWidth = strlen(instructText) * 20; // Adjusted for larger font
+    glRasterPos2i(centerX - (instWidth / 8), centerY - 70);
+    
+    for (int i = 0; instructText[i] != '\0'; i++) {
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, instructText[i]);
+    }
+    
+    // Draw animated stars or particles
+    static float starPositions[20][2]; // Store 20 star positions
+    static bool initialized = false;
+    
+    if (!initialized) {
+        // Initialize star positions randomly
+        for (int i = 0; i < 20; i++) {
+            starPositions[i][0] = (float)(rand() % WIDTH);
+            starPositions[i][1] = (float)(rand() % HEIGHT);
+        }
+        initialized = true;
+    }
+    
+    // Draw and update stars - bigger stars
+    glPointSize(6.0f); // Increased star size
+    glBegin(GL_POINTS);
+    for (int i = 0; i < 20; i++) {
+        // Use time-based oscillation for color
+        float oscillation = (sin(glfwGetTime() * 3.0f + i) + 1.0f) * 0.5f;
+        glColor3f(1.0f, oscillation, oscillation); // Pulsing white-red
+        glVertex2f(starPositions[i][0], starPositions[i][1]);
+        
+        // Update position - circular movement
+        starPositions[i][0] += sin(glfwGetTime() * 2.0f + i) * 2.0f;
+        starPositions[i][1] += cos(glfwGetTime() * 2.0f + i) * 2.0f;
+        
+        // Wrap around edges
+        if (starPositions[i][0] < 0) starPositions[i][0] = WIDTH;
+        if (starPositions[i][0] > WIDTH) starPositions[i][0] = 0;
+        if (starPositions[i][1] < 0) starPositions[i][1] = HEIGHT;
+        if (starPositions[i][1] > HEIGHT) starPositions[i][1] = 0;
+    }
+    glEnd();
+    glPointSize(1.0f);
+    
+    // Restore matrices and re-enable features
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    glMatrixMode(GL_MODELVIEW);
+    glPopMatrix();
+    
+    glEnable(GL_DEPTH_TEST);
     glEnable(GL_LIGHTING);
 }
 
@@ -145,14 +266,15 @@ int main() {
         // Process input
         processInput(window);
         
-        // Update timer if game has started
-        if (gameStarted) {
+        // Update timer if game has started and not completed
+        if (gameStarted && !gameCompleted) {
             currentGameTime = glfwGetTime() - gameStartTime;
             sprintf(timeString, "Time: %.2f seconds", currentGameTime);
-        } else if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS ||
+        } else if (!gameStarted && !gameCompleted &&
+                  (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS ||
                    glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS ||
                    glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS ||
-                   glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+                   glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)) {
             // Start timer when player first moves
             gameStarted = true;
             gameStartTime = glfwGetTime();
@@ -162,14 +284,19 @@ int main() {
         glClearColor(0.53f, 0.81f, 0.92f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         
-        // Set up the camera view
-        setupCamera();
-        
-        // Render the maze
-        renderMaze();
-        
-        // Render timer display
-        renderTimer();
+        if (gameCompleted) {
+            // Render congratulations screen instead of the game
+            renderCongratsScreen();
+        } else {
+            // Set up the camera view
+            setupCamera();
+            
+            // Render the maze
+            renderMaze();
+            
+            // Render timer display
+            renderTimer();
+        }
         
         // Swap front and back buffers
         glfwSwapBuffers(window);
@@ -182,7 +309,6 @@ int main() {
     glfwTerminate();
     return 0;
 }
-
 // Set up the camera perspective and position
 void setupCamera() {
     // Set up projection matrix
@@ -368,10 +494,41 @@ void processInput(GLFWwindow* window) {
     float deltaTime = currentTime - lastTime;
     lastTime = currentTime;
     
+    if (gameCompleted) {
+            if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
+                // Reset player position
+                playerX = 1.5f;
+                playerY = 0.0f;
+                playerZ = 1.5f;
+                playerAngle = 0.0f;
+                
+                // Reset timer
+                gameStarted = false;
+                gameCompleted = false;
+                gameStartTime = glfwGetTime();
+                sprintf(timeString, "Time: 0.00 seconds");
+                
+                printf("Game restarted!\n");
+            }
+            
+            // ESC key to exit
+            if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+                glfwSetWindowShouldClose(window, GL_TRUE);
+            }
+            
+            return; // Skip movement processing if game is completed
+        }
     // Adjust speeds based on frame time
     float adjustedSpeed = playerSpeed * deltaTime * 60.0f;
     float adjustedRotSpeed = rotationSpeed * deltaTime * 60.0f;
-    
+    if (!gameStarted && (
+            glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS ||
+            glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS ||
+            glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS ||
+            glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)) {
+            gameStarted = true;
+            gameStartTime = glfwGetTime();
+        }
     // Forward movement (W)
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
         float newX = playerX + sin(playerAngle) * adjustedSpeed;
@@ -423,15 +580,18 @@ void processInput(GLFWwindow* window) {
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
         playerAngle += adjustedRotSpeed;
     }
-    
+
     // Check if player reached the goal
     int cellX = (int)playerX;
     int cellZ = (int)playerZ;
-    
+
     if (cellX >= 0 && cellX < MAZE_WIDTH && cellZ >= 0 && cellZ < MAZE_HEIGHT) {
-        if (maze[cellZ][cellX] == 2) {
+        if (maze[cellZ][cellX] == 2 && !gameCompleted) {
+            // Mark game as completed instead of closing the window
+            gameCompleted = true;
+            // Set congratulation message with completion time
+            sprintf(congratsMessage, "Congratulations! You completed the maze in %.2f seconds.", currentGameTime);
             printf("Congratulations! You reached the goal!\n");
-            glfwSetWindowShouldClose(window, GL_TRUE);
         }
     }
     
