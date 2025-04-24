@@ -19,6 +19,16 @@ float currentGameTime = 0.0f;
 bool gameStarted = false;
 char timeString[32];
 
+enum GameState {
+    TITLE_SCREEN,
+    PLAYING,
+    COMPLETED,
+    RULES_SCREEN
+};
+
+enum GameState currentGameState = TITLE_SCREEN;
+bool rulesDisplayed = false;
+
 // Player properties
 float playerX = 1.5f;
 float playerY = 0.0f;
@@ -52,6 +62,244 @@ void handleKeyInput(GLFWwindow* window);
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow* window);
 bool checkCollision(float newX, float newZ);
+
+void renderTitleScreen() {
+    // Disable lighting for 2D rendering
+    glDisable(GL_LIGHTING);
+    glDisable(GL_DEPTH_TEST);
+    
+    // Set up orthographic projection
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    glOrtho(0, WIDTH, 0, HEIGHT, -1, 1);
+    
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+    
+    // Draw a gradient background
+    glBegin(GL_QUADS);
+    // Deep blue at bottom to lighter blue at top
+    glColor3f(0.1f, 0.1f, 0.3f);
+    glVertex2f(0, 0);
+    glVertex2f(WIDTH, 0);
+    glColor3f(0.4f, 0.4f, 0.8f);
+    glVertex2f(WIDTH, HEIGHT);
+    glVertex2f(0, HEIGHT);
+    glEnd();
+    
+    // Draw some decorative maze-like pattern in background
+    glLineWidth(2.0f);
+    glColor3f(0.5f, 0.5f, 0.9f);
+    
+    // Draw grid of maze-like lines
+    int gridSize = 40;
+    for (int x = 0; x < WIDTH; x += gridSize) {
+        for (int y = 0; y < HEIGHT; y += gridSize) {
+            // Randomly decide whether to draw horizontal or vertical line
+            if (((x + y) / gridSize) % 3 == 0) {
+                glBegin(GL_LINES);
+                glVertex2f(x, y);
+                glVertex2f(x + gridSize, y);
+                glEnd();
+            } else if (((x + y) / gridSize) % 3 == 1) {
+                glBegin(GL_LINES);
+                glVertex2f(x, y);
+                glVertex2f(x, y + gridSize);
+                glEnd();
+            }
+        }
+    }
+    
+    // Calculate center position for text
+    int centerX = WIDTH / 2;
+    int centerY = HEIGHT / 2;
+    
+    // Draw title "MAZE3D" in big font
+    glColor3f(1.0f, 0.8f, 0.2f); // Gold color
+    char titleText[] = "MAZE3D";
+    
+    // Shadow effect (slight offset)
+    glColor3f(0.0f, 0.0f, 0.0f);
+    glRasterPos2i(centerX - (strlen(titleText) * 24) + 4, centerY + 54);
+    for (int i = 0; i < strlen(titleText); i++) {
+        glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, titleText[i]);
+    }
+    
+    // Main title - use the biggest font available and scale position accordingly
+    glColor3f(1.0f, 0.8f, 0.0f); // Gold color
+    glRasterPos2i(centerX - (strlen(titleText) * 24), centerY + 50);
+    for (int i = 0; i < strlen(titleText); i++) {
+        glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, titleText[i]);
+    }
+    
+    // Draw instructions
+    glColor3f(1.0f, 1.0f, 1.0f);
+    char playText[] = "Press P to Play";
+    glRasterPos2i(centerX - (strlen(playText) * 4), centerY - 20);
+    for (int i = 0; i < strlen(playText); i++) {
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, playText[i]);
+    }
+    
+    char rulesText[] = "Press ? for Rules";
+    glRasterPos2i(centerX - (strlen(rulesText) * 4), centerY - 50);
+    for (int i = 0; i < strlen(rulesText); i++) {
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, rulesText[i]);
+    }
+    
+    // Draw animated effect (pulsing border)
+    float pulseValue = (sin(glfwGetTime() * 2.0) + 1.0) * 0.5;
+    glLineWidth(3.0f);
+    glColor3f(0.5f + pulseValue * 0.5f, 0.5f + pulseValue * 0.3f, 0.0f);
+    glBegin(GL_LINE_LOOP);
+    glVertex2f(centerX - 200, centerY - 100);
+    glVertex2f(centerX + 200, centerY - 100);
+    glVertex2f(centerX + 200, centerY + 100);
+    glVertex2f(centerX - 200, centerY + 100);
+    glEnd();
+    
+    // Restore original state
+    glLineWidth(1.0f);
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    glMatrixMode(GL_MODELVIEW);
+    glPopMatrix();
+    
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_LIGHTING);
+}
+
+bool keyPressed[GLFW_KEY_LAST] = {false};
+
+// Add this function to set up key callback
+void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+    // Handle single key press events for menu navigation
+    if (action == GLFW_PRESS) {
+        // Save the key state
+        keyPressed[key] = true;
+        
+        // Title screen controls
+        if (currentGameState == TITLE_SCREEN) {
+            if (key == GLFW_KEY_P) {
+                currentGameState = PLAYING;
+                gameStarted = false;
+                gameCompleted = false;
+                gameStartTime = glfwGetTime();
+                sprintf(timeString, "Time: 0.00 seconds");
+                
+                // Reset player position
+                playerX = 1.5f;
+                playerY = 0.0f;
+                playerZ = 1.5f;
+                playerAngle = 0.0f;
+            }
+            
+            // Check for '?' key (GLFW_KEY_SLASH with SHIFT)
+            if (key == GLFW_KEY_SLASH && (mods & GLFW_MOD_SHIFT)) {
+                currentGameState = RULES_SCREEN;
+            }
+        }
+        
+        // Rules screen controls
+        else if (currentGameState == RULES_SCREEN) {
+            if (key == GLFW_KEY_B) {
+                currentGameState = TITLE_SCREEN;
+            }
+        }
+        
+        // Completed screen controls
+        else if (currentGameState == COMPLETED) {
+            if (key == GLFW_KEY_R) {
+                // Reset player position
+                playerX = 1.5f;
+                playerY = 0.0f;
+                playerZ = 1.5f;
+                playerAngle = 0.0f;
+                
+                // Reset timer
+                gameStarted = false;
+                gameCompleted = false;
+                currentGameState = PLAYING;
+                gameStartTime = glfwGetTime();
+                sprintf(timeString, "Time: 0.00 seconds");
+            }
+            
+            if (key == GLFW_KEY_B) {
+                currentGameState = TITLE_SCREEN;
+            }
+        }
+    }
+    else if (action == GLFW_RELEASE) {
+        // Clear the key state
+        keyPressed[key] = false;
+    }
+}
+void renderRulesScreen() {
+    // Disable lighting for 2D rendering
+    glDisable(GL_LIGHTING);
+    glDisable(GL_DEPTH_TEST);
+    
+    // Set up orthographic projection
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    glOrtho(0, WIDTH, 0, HEIGHT, -1, 1);
+    
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+    
+    // Draw a light background
+    glBegin(GL_QUADS);
+    glColor3f(0.2f, 0.2f, 0.4f);
+    glVertex2f(0, 0);
+    glVertex2f(WIDTH, 0);
+    glVertex2f(WIDTH, HEIGHT);
+    glVertex2f(0, HEIGHT);
+    glEnd();
+    
+    // Draw title
+    glColor3f(1.0f, 0.8f, 0.0f); // Gold color
+    char titleText[] = "HOW TO PLAY";
+    int centerX = WIDTH / 2;
+    glRasterPos2i(centerX - (strlen(titleText) * 5), HEIGHT - 50);
+    for (int i = 0; i < strlen(titleText); i++) {
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, titleText[i]);
+    }
+    
+    // Draw instructions
+    glColor3f(1.0f, 1.0f, 1.0f);
+    char rulesLines[][100] = {
+        "CONTROLS:",
+        "W - Move Forward",
+        "S - Move Backward",
+        "A - Turn Left",
+        "D - Turn Right",
+        "",
+        "GOAL:",
+        "Find the RED block in the maze as quickly as possible.",
+        "Your time will be displayed when you finish.",
+        "",
+        "Press B to return to the title screen"
+    };
+    
+    for (int i = 0; i < 11; i++) {
+        glRasterPos2i(WIDTH/4, HEIGHT - 100 - (i * 30));
+        for (int j = 0; j < strlen(rulesLines[i]); j++) {
+            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, rulesLines[i][j]);
+        }
+    }
+    
+    // Restore original state
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    glMatrixMode(GL_MODELVIEW);
+    glPopMatrix();
+    
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_LIGHTING);
+}
 
 void renderTimer() {
     // Disable lighting for text rendering
@@ -213,6 +461,9 @@ int main() {
         return -1;
     }
     
+    // Initialize game state
+    currentGameState = TITLE_SCREEN;
+    
     // Create a windowed mode window and its OpenGL context
     GLFWwindow* window = glfwCreateWindow(WIDTH, HEIGHT, "3D Maze Game", NULL, NULL);
     if (!window) {
@@ -266,36 +517,48 @@ int main() {
         // Process input
         processInput(window);
         
-        // Update timer if game has started and not completed
-        if (gameStarted && !gameCompleted) {
-            currentGameTime = glfwGetTime() - gameStartTime;
-            sprintf(timeString, "Time: %.2f seconds", currentGameTime);
-        } else if (!gameStarted && !gameCompleted &&
-                  (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS ||
-                   glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS ||
-                   glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS ||
-                   glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)) {
-            // Start timer when player first moves
-            gameStarted = true;
-            gameStartTime = glfwGetTime();
-        }
-        
-        // Set background color (blue sky)
+        // Clear screen with sky blue background
         glClearColor(0.53f, 0.81f, 0.92f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         
-        if (gameCompleted) {
-            // Render congratulations screen instead of the game
-            renderCongratsScreen();
-        } else {
-            // Set up the camera view
-            setupCamera();
-            
-            // Render the maze
-            renderMaze();
-            
-            // Render timer display
-            renderTimer();
+        // Render based on current game state
+        switch (currentGameState) {
+            case TITLE_SCREEN:
+                renderTitleScreen();
+                break;
+                
+            case RULES_SCREEN:
+                renderRulesScreen();
+                break;
+                
+            case PLAYING:
+                // Update timer if game has started and not completed
+                if (gameStarted && !gameCompleted) {
+                    currentGameTime = glfwGetTime() - gameStartTime;
+                    sprintf(timeString, "Time: %.2f seconds", currentGameTime);
+                } else if (!gameStarted &&
+                          (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS ||
+                           glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS ||
+                           glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS ||
+                           glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)) {
+                    // Start timer when player first moves
+                    gameStarted = true;
+                    gameStartTime = glfwGetTime();
+                }
+                
+                // Set up the camera view
+                setupCamera();
+                
+                // Render the maze
+                renderMaze();
+                
+                // Render timer display
+                renderTimer();
+                break;
+                
+            case COMPLETED:
+                renderCongratsScreen();
+                break;
         }
         
         // Swap front and back buffers
@@ -486,6 +749,7 @@ void renderMaze() {
     }
 }
 
+bool keyPressedLastFrame[GLFW_KEY_LAST] = {false};
 // Process keyboard input for continuous movement
 void processInput(GLFWwindow* window) {
     // Get the current time for smooth movement
@@ -494,41 +758,124 @@ void processInput(GLFWwindow* window) {
     float deltaTime = currentTime - lastTime;
     lastTime = currentTime;
     
-    if (gameCompleted) {
-            if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
-                // Reset player position
-                playerX = 1.5f;
-                playerY = 0.0f;
-                playerZ = 1.5f;
-                playerAngle = 0.0f;
-                
-                // Reset timer
-                gameStarted = false;
-                gameCompleted = false;
-                gameStartTime = glfwGetTime();
-                sprintf(timeString, "Time: 0.00 seconds");
-                
-                printf("Game restarted!\n");
-            }
+    // Handle title screen input
+    if (currentGameState == TITLE_SCREEN) {
+        // Check for P key (Play game)
+        if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS && !keyPressedLastFrame[GLFW_KEY_P]) {
+            currentGameState = PLAYING;
+            gameStarted = false;
+            gameCompleted = false;
+            gameStartTime = glfwGetTime();
+            sprintf(timeString, "Time: 0.00 seconds");
             
-            // ESC key to exit
-            if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-                glfwSetWindowShouldClose(window, GL_TRUE);
-            }
+            // Reset player position
+            playerX = 1.5f;
+            playerY = 0.0f;
+            playerZ = 1.5f;
+            playerAngle = 0.0f;
             
-            return; // Skip movement processing if game is completed
+            keyPressedLastFrame[GLFW_KEY_P] = true;
         }
+        else if (glfwGetKey(window, GLFW_KEY_P) == GLFW_RELEASE) {
+            keyPressedLastFrame[GLFW_KEY_P] = false;
+        }
+        
+        // Check for ? key (Rules)
+        bool shiftPressed = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
+                           glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
+        
+        if (glfwGetKey(window, GLFW_KEY_SLASH) == GLFW_PRESS && shiftPressed &&
+            !keyPressedLastFrame[GLFW_KEY_SLASH]) {
+            currentGameState = RULES_SCREEN;
+            keyPressedLastFrame[GLFW_KEY_SLASH] = true;
+        }
+        else if (glfwGetKey(window, GLFW_KEY_SLASH) == GLFW_RELEASE) {
+            keyPressedLastFrame[GLFW_KEY_SLASH] = false;
+        }
+        
+        // ESC key to exit
+        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+            glfwSetWindowShouldClose(window, GL_TRUE);
+        }
+        
+        return; // Skip further processing
+    }
+    
+    // Handle rules screen input
+    if (currentGameState == RULES_SCREEN) {
+        // B key to go back to title screen
+        if (glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS && !keyPressedLastFrame[GLFW_KEY_B]) {
+            currentGameState = TITLE_SCREEN;
+            keyPressedLastFrame[GLFW_KEY_B] = true;
+        }
+        else if (glfwGetKey(window, GLFW_KEY_B) == GLFW_RELEASE) {
+            keyPressedLastFrame[GLFW_KEY_B] = false;
+        }
+        
+        // ESC key to exit
+        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+            glfwSetWindowShouldClose(window, GL_TRUE);
+        }
+        
+        return; // Skip further processing
+    }
+    
+    // Handle game completed state
+    if (currentGameState == COMPLETED || gameCompleted) {
+        // R key to restart
+        if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS && !keyPressedLastFrame[GLFW_KEY_R]) {
+            // Reset player position
+            playerX = 1.5f;
+            playerY = 0.0f;
+            playerZ = 1.5f;
+            playerAngle = 0.0f;
+            
+            // Reset timer
+            gameStarted = false;
+            gameCompleted = false;
+            currentGameState = PLAYING;
+            gameStartTime = glfwGetTime();
+            sprintf(timeString, "Time: 0.00 seconds");
+            
+            printf("Game restarted!\n");
+            keyPressedLastFrame[GLFW_KEY_R] = true;
+        }
+        else if (glfwGetKey(window, GLFW_KEY_R) == GLFW_RELEASE) {
+            keyPressedLastFrame[GLFW_KEY_R] = false;
+        }
+        
+        // B key to go back to title
+        if (glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS && !keyPressedLastFrame[GLFW_KEY_B]) {
+            currentGameState = TITLE_SCREEN;
+            keyPressedLastFrame[GLFW_KEY_B] = true;
+        }
+        else if (glfwGetKey(window, GLFW_KEY_B) == GLFW_RELEASE) {
+            keyPressedLastFrame[GLFW_KEY_B] = false;
+        }
+        
+        // ESC key to exit
+        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+            glfwSetWindowShouldClose(window, GL_TRUE);
+        }
+        
+        return; // Skip movement processing if game is completed
+    }
+    
+    // From here on, we're in the PLAYING state
     // Adjust speeds based on frame time
     float adjustedSpeed = playerSpeed * deltaTime * 60.0f;
     float adjustedRotSpeed = rotationSpeed * deltaTime * 60.0f;
+    
+    // Start the game timer when first movement occurs
     if (!gameStarted && (
             glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS ||
             glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS ||
             glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS ||
             glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)) {
-            gameStarted = true;
-            gameStartTime = glfwGetTime();
-        }
+        gameStarted = true;
+        gameStartTime = glfwGetTime();
+    }
+    
     // Forward movement (W)
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
         float newX = playerX + sin(playerAngle) * adjustedSpeed;
@@ -580,27 +927,31 @@ void processInput(GLFWwindow* window) {
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
         playerAngle += adjustedRotSpeed;
     }
-
+    
     // Check if player reached the goal
     int cellX = (int)playerX;
     int cellZ = (int)playerZ;
-
+    
     if (cellX >= 0 && cellX < MAZE_WIDTH && cellZ >= 0 && cellZ < MAZE_HEIGHT) {
         if (maze[cellZ][cellX] == 2 && !gameCompleted) {
-            // Mark game as completed instead of closing the window
+            // Mark game as completed
             gameCompleted = true;
+            currentGameState = COMPLETED;
             // Set congratulation message with completion time
             sprintf(congratsMessage, "Congratulations! You completed the maze in %.2f seconds.", currentGameTime);
             printf("Congratulations! You reached the goal!\n");
         }
     }
     
-    // ESC key to exit
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-        glfwSetWindowShouldClose(window, GL_TRUE);
+    // ESC key to return to title screen (not exit the game)
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS && !keyPressedLastFrame[GLFW_KEY_ESCAPE]) {
+        currentGameState = TITLE_SCREEN;
+        keyPressedLastFrame[GLFW_KEY_ESCAPE] = true;
+    }
+    else if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_RELEASE) {
+        keyPressedLastFrame[GLFW_KEY_ESCAPE] = false;
     }
 }
-
 // Check for collision with maze walls
 bool checkCollision(float newX, float newZ) {
     // Use a smaller buffer for more precise collision detection
