@@ -19,6 +19,8 @@ float currentGameTime = 0.0f;
 bool gameStarted = false;
 char timeString[32];
 
+
+
 enum GameState {
     TITLE_SCREEN,
     PLAYING,
@@ -38,22 +40,31 @@ float playerSpeed = 0.05f;
 float rotationSpeed = 0.03f;
 bool gameCompleted = false;
 char congratsMessage[128];
+
+
+int playerScore = 0;
+char scoreString[32]; // For displaying the score
+
+// Gold bar animation parameters
+float goldBarYOffset = 0.0f;
+float goldBarAnimSpeed = 1.5f;
+float goldBarRotation = 0.0f;
+
 // Maze dimensions and layout
 const int MAZE_WIDTH = 10;
 const int MAZE_HEIGHT = 10;
 int maze[MAZE_WIDTH][MAZE_HEIGHT] = {
     {1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-    {1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+    {1, 0, 0, 0, 0, 0, 3, 0, 0, 1},
     {1, 0, 1, 1, 0, 1, 1, 1, 0, 1},
     {1, 0, 1, 0, 0, 0, 0, 1, 0, 1},
-    {1, 0, 1, 0, 1, 1, 0, 1, 0, 1},
+    {1, 0, 1, 0, 1, 1, 3, 1, 0, 1},
     {1, 0, 1, 0, 1, 0, 0, 0, 0, 1},
     {1, 0, 1, 1, 1, 0, 1, 1, 0, 1},
-    {1, 0, 0, 0, 0, 0, 1, 0, 0, 1},
-    {1, 0, 1, 1, 1, 0, 1, 0, 2, 1}, // 2 represents the goal (red wall)
+    {1, 0, 0, 0, 3, 0, 1, 0, 0, 1},
+    {1, 3, 1, 1, 1, 0, 1, 0, 2, 1}, // 2 is still the goal (red wall)
     {1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
 };
-
 // Function prototypes
 void setupCamera();
 void renderMaze();
@@ -279,6 +290,7 @@ void renderRulesScreen() {
         "",
         "GOAL:",
         "Find the RED block in the maze as quickly as possible.",
+        "Collect Gold Bars for Increasing the Score",
         "Your time will be displayed when you finish.",
         "",
         "Press B to return to the title screen"
@@ -323,7 +335,10 @@ void renderTimer() {
     for (int i = 0; timeString[i] != '\0'; i++) {
         glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, timeString[i]);
     }
-    
+    glRasterPos2i(10, 40); // Position below the timer
+        for (int i = 0; scoreString[i] != '\0'; i++) {
+            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, scoreString[i]);
+        }
     // Return to 3D rendering
     glMatrixMode(GL_MODELVIEW);
     glPopMatrix();
@@ -511,7 +526,7 @@ int main() {
     // Initialize timer values
     gameStartTime = glfwGetTime();
     sprintf(timeString, "Time: 0.00 seconds");
-    
+    sprintf(scoreString, "  Score: %d", playerScore);
     // Main loop
     while (!glfwWindowShouldClose(window)) {
         // Process input
@@ -715,6 +730,10 @@ void renderMaze() {
     GLfloat brown[] = { 0.65f, 0.32f, 0.10f, 1.0f };
     glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, brown);
     
+    goldBarYOffset = sin(glfwGetTime() * goldBarAnimSpeed) * 0.1f;
+        goldBarRotation += 1.0f; // Rotate gold bars
+        if (goldBarRotation > 360.0f) goldBarRotation -= 360.0f;
+    
     glNormal3f(0.0f, 1.0f, 0.0f); // Floor normal points up
     glVertex3f(0.0f, 0.0f, 0.0f);
     glVertex3f(MAZE_WIDTH, 0.0f, 0.0f);
@@ -745,6 +764,25 @@ void renderMaze() {
                 drawCube(1.0f);
                 glPopMatrix();
             }
+            else if (maze[z][x] == 3) {
+                // gold
+                // Solid yellow-gold color without reflection changes during rotation
+                GLfloat yellow[] = { 1.0f, 0.84f, 0.0f, 1.0f }; // Bright gold-yellow color
+                GLfloat no_specular[] = { 0.0f, 0.0f, 0.0f, 1.0f }; // No specular highlight
+                GLfloat no_shininess[] = { 0.0f }; // No shininess
+
+                glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, yellow);
+                glMaterialfv(GL_FRONT, GL_SPECULAR, no_specular); // Disable specular highlights
+                glMaterialfv(GL_FRONT, GL_SHININESS, no_shininess); // Disable shininess
+                                           
+                // Draw floating gold bar
+                glPushMatrix();
+                glTranslatef(x + 0.5f, 0.3f + goldBarYOffset, z + 0.5f);
+                glRotatef(goldBarRotation, 0.0f, 1.0f, 0.0f); // Rotate around Y axis
+                glScalef(0.3f, 0.15f, 0.6f); // Make it bar-shaped
+                drawCube(1.0f);
+                glPopMatrix();
+            }
         }
     }
 }
@@ -757,7 +795,7 @@ void processInput(GLFWwindow* window) {
     static float lastTime = 0.0f;
     float deltaTime = currentTime - lastTime;
     lastTime = currentTime;
-    
+
     // Handle title screen input
     if (currentGameState == TITLE_SCREEN) {
         // Check for P key (Play game)
@@ -779,7 +817,7 @@ void processInput(GLFWwindow* window) {
         else if (glfwGetKey(window, GLFW_KEY_P) == GLFW_RELEASE) {
             keyPressedLastFrame[GLFW_KEY_P] = false;
         }
-        
+       
         // Check for ? key (Rules)
         bool shiftPressed = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
                            glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
@@ -941,6 +979,13 @@ void processInput(GLFWwindow* window) {
             sprintf(congratsMessage, "Congratulations! You completed the maze in %.2f seconds.", currentGameTime);
             printf("Congratulations! You reached the goal!\n");
         }
+        if (maze[cellZ][cellX] == 3) {
+                // Collect the gold bar
+                maze[cellZ][cellX] = 0; // Remove gold bar from maze
+                playerScore++;
+                sprintf(scoreString, "Score: %d", playerScore);
+                printf("Gold bar collected! Score: %d\n", playerScore);
+            }
     }
     
     // ESC key to return to title screen (not exit the game)
