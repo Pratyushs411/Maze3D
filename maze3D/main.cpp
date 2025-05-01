@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
@@ -44,7 +46,8 @@ char congratsMessage[128];
 
 int playerScore = 0;
 char scoreString[32]; // For displaying the score
-
+char finalscore[32];
+char finaltime[32];
 // Gold bar animation parameters
 float goldBarYOffset = 0.0f;
 float goldBarAnimSpeed = 1.5f;
@@ -290,9 +293,8 @@ void renderRulesScreen() {
         "",
         "GOAL:",
         "Find the RED block in the maze as quickly as possible.",
-        "Collect Gold Bars for Increasing the Score",
+        "Collect Gold Bars for Decreasing the time taken by 5 sec",
         "Your time will be displayed when you finish.",
-        "",
         "Press B to return to the title screen"
     };
     
@@ -405,20 +407,33 @@ void renderCongratsScreen() {
     for (int i = 0; titleText[i] != '\0'; i++) {
         glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, titleText[i]);
     }
-    
-    // Draw congratulations message - LARGER SIZE using GLUT_BITMAP_HELVETICA_18
+
     glColor3f(1.0f, 1.0f, 1.0f); // White text
-    int msgWidth = strlen(congratsMessage) * 20; // Adjusted for larger font
-    glRasterPos2i(centerX/1.5, centerY);
+    int msgWidth = strlen(congratsMessage) * 20;
+    glRasterPos2i(centerX/1.35, centerY);
     
     for (int i = 0; congratsMessage[i] != '\0'; i++) {
         glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, congratsMessage[i]);
+    }
+    glColor3f(1.0f, 1.0f, 1.0f); // White text
+    int msgWidth1 = strlen(finalscore) * 20; // Adjusted for larger font
+    glRasterPos2i(centerX/1.2, centerY-20);
+    
+    for (int i = 0; finalscore[i] != '\0'; i++) {
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, finalscore[i]);
+    }
+    glColor3f(1.0f, 1.0f, 1.0f); // White text
+    int msgWidth2 = strlen(finaltime) * 20; // Adjusted for larger font
+    glRasterPos2i(centerX/1.3, centerY-40);
+    
+    for (int i = 0; finaltime[i] != '\0'; i++) {
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, finaltime[i]);
     }
     
     // Draw instruction text - increased size
     char instructText[] = "Press R to play again or ESC to quit";
     int instWidth = strlen(instructText) * 20; // Adjusted for larger font
-    glRasterPos2i(centerX - (instWidth / 8), centerY - 70);
+    glRasterPos2i(centerX/1.3, centerY - 70);
     
     for (int i = 0; instructText[i] != '\0'; i++) {
         glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, instructText[i]);
@@ -526,7 +541,7 @@ int main() {
     // Initialize timer values
     gameStartTime = glfwGetTime();
     sprintf(timeString, "Time: 0.00 seconds");
-    sprintf(scoreString, "  Score: %d", playerScore);
+    sprintf(scoreString, "Gold Bars Collected: %d", playerScore);
     // Main loop
     while (!glfwWindowShouldClose(window)) {
         // Process input
@@ -747,8 +762,8 @@ void renderMaze() {
         for (int z = 0; z < MAZE_HEIGHT; z++) {
             if (maze[z][x] == 1) {
                 // Regular wall (green)
-                GLfloat green[] = { 0.0f, 0.8f, 0.0f, 1.0f };
-                glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, green);
+                GLfloat grey[] = { 0.5f, 0.5f, 0.5f, 1.0f };
+                glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, grey);
                 
                 glPushMatrix();
                 glTranslatef(x + 0.5f, 0.5f, z + 0.5f);
@@ -976,15 +991,17 @@ void processInput(GLFWwindow* window) {
             gameCompleted = true;
             currentGameState = COMPLETED;
             // Set congratulation message with completion time
-            sprintf(congratsMessage, "Congratulations! You completed the maze in %.2f seconds.", currentGameTime);
+            sprintf(congratsMessage, "You completed the maze in %.2f seconds.\n", currentGameTime);
+            sprintf(finalscore,"Gold Bars Collected: %d\n", playerScore);
+            sprintf(finaltime,"Final Completion Time: %.2f seconds.\n", currentGameTime-(5* playerScore));
             printf("Congratulations! You reached the goal!\n");
         }
         if (maze[cellZ][cellX] == 3) {
                 // Collect the gold bar
                 maze[cellZ][cellX] = 0; // Remove gold bar from maze
                 playerScore++;
-                sprintf(scoreString, "Score: %d", playerScore);
-                printf("Gold bar collected! Score: %d\n", playerScore);
+                sprintf(scoreString, "Gold Bars Collected: %d", playerScore);
+                printf("Gold bar collected! total: %d\n", playerScore);
             }
     }
     
