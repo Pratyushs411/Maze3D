@@ -16,6 +16,26 @@ Welcome to **MAZE3D**, a fully interactive 3D maze game built using C++ and Open
 - 🟡 **Collect Gold Bars**: Each gold bar reduces your total time by 5 seconds!
 ---
 
+## 🖼 Gameplay Screenshots
+
+- Maze
+![Title Screen](gameplay.png)
+
+- Collectibles
+![Title Screen](collectibles.png)
+
+- Goal
+![Title Screen](Goal.png)
+
+- Final Screen
+![Title Screen](congrats.png)
+
+---
+## 🎥 Demo Video
+
+📽 [Click here to watch the demo video](demo.mp4)
+
+---
 ## 🛠️ Built With
 
 - **Xcode** (macOS)
