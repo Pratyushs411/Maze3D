@@ -1,17 +1,19 @@
 # 🧱 3D Maze Navigation Game
 
-A 3D first-person maze navigation game created using Modern OpenGL and C/C++ in Xcode (macOS). Use keyboard controls to navigate the maze, and reach the red goal cube as fast as possible while a timer tracks your progress.
+Welcome to **MAZE3D**, a fully interactive 3D maze game built using C++ and OpenGL (GLFW + GLUT). Navigate your way through a 3D maze, collect gold bars, and reach the red goal cube to complete the game. The game features dynamic lighting, floating collectibles, and a real-time timer with score tracking.
 
 ---
 
-## 🎮 Features
+---
+
+## ⚙️ Features
 
 - First-person camera movement with smooth controls
 - Simple 3D maze layout using a grid system
 - Timer display using GLUT fonts
 - Basic lighting and shading effects
 - Red goal cube marks the end of the maze
-
+- 🟡 **Collect Gold Bars**: Each gold bar reduces your total time by 5 seconds!
 ---
 
 ## 🛠️ Built With
@@ -24,14 +26,17 @@ A 3D first-person maze navigation game created using Modern OpenGL and C/C++ in 
 
 ---
 
-## 🔧 Controls
+## 🎮 How to Play
 
-| Key | Action         |
-|-----|----------------|
-| `W` | Move Forward   |
-| `S` | Move Backward  |
-| `A` | Rotate Left    |
-| `D` | Rotate Right   |
+- **W** - Move Forward  
+- **S** - Move Backward  
+- **A** - Turn Left  
+- **D** - Turn Right  
+- **P** - Start the Game  
+- **?** - View Rules (SHIFT + `/`)  
+- **ESC** - Return to Main Menu or Exit  
+- **R** - Restart after completion  
+- **B** - Back to Main Menu
 
 ---
 
