@@ -25,7 +25,7 @@ Welcome to **MAZE3D**, a fully interactive 3D maze game built using C++ and Open
 ![Title Screen](collectibles.png)
 
 - Goal
-![Title Screen](Goal.png)
+![Title Screen](goal.png)
 
 - Final Screen
 ![Title Screen](congrats.png)
